@@ -1,7 +1,7 @@
 import csv
-import numpy as np
 from collections import Counter
 import os
+from difflib import SequenceMatcher
 
 def MED(seq1, seq2):
     cache = [[float("inf")] * (len(seq2) + 1) for _ in range(len(seq1) + 1)]
@@ -24,15 +24,15 @@ def MED(seq1, seq2):
                 delete_cost = 1 + cache[i + 1][j]
                 substitute_cost = 1 + cache[i + 1][j + 1]
 
-                if insert_cost <= delete_cost and insert_cost <= substitute_cost:
-                    cache[i][j] = insert_cost
-                    ops[i][j] = 'insert'
-                elif delete_cost <= insert_cost and delete_cost <= substitute_cost:
-                    cache[i][j] = delete_cost
+                min_cost = min(insert_cost, delete_cost, substitute_cost)
+                cache[i][j] = min_cost
+
+                if min_cost == substitute_cost:
+                    ops[i][j] = 'substitute'
+                elif min_cost == delete_cost:
                     ops[i][j] = 'delete'
                 else:
-                    cache[i][j] = substitute_cost
-                    ops[i][j] = 'substitute'
+                    ops[i][j] = 'insert'
 
     aligned_seq1, aligned_seq2 = [], []
     i, j = 0, 0
@@ -59,23 +59,36 @@ def MED(seq1, seq2):
     return ''.join(aligned_seq1), ''.join(aligned_seq2)
 
 def align_multiple_sequences(sequences):
-    first_seq = sequences[0]
-    aligned_sequences = sequences[1:]
-    count = 0
-    while count != len(aligned_sequences):
-        count = 0
-        aligned_sequences_new = []
-        for seq in aligned_sequences:
-            new_seq, first_seq = MED(seq, first_seq)
-            aligned_sequences_new.append(new_seq)
+    if not sequences:
+        return []
 
-        aligned_sequences = aligned_sequences_new
-        for seq in aligned_sequences:
-            if len(seq) == len(first_seq):
-                count += 1
+    max_attempts = 3
+    attempt = 0
 
-    aligned_sequences.insert(0, first_seq)
-    return aligned_sequences
+    while attempt < max_attempts:
+        try:
+            first_seq = sequences[0]
+            aligned_sequences = []
+
+            for seq in sequences[1:]:
+                new_seq, aligned_first = MED(seq, first_seq)
+                first_seq = aligned_first
+                aligned_sequences.append(new_seq)
+
+            all_same_length = all(len(seq) == len(first_seq) for seq in aligned_sequences)
+            if all_same_length:
+                aligned_sequences.insert(0, first_seq)
+                return aligned_sequences
+
+            attempt += 1
+            if attempt < max_attempts:
+                sequences.append(sequences.pop(0))
+        except:
+            attempt += 1
+            if attempt < max_attempts:
+                sequences.append(sequences.pop(0))
+
+    return sequences
 
 def vote_characters(aligned_outputs):
     voted_result = []
@@ -119,26 +132,34 @@ def process_ocr_results(input_file='input.csv', output_file='output.csv'):
     with open(input_file, 'r', encoding='utf-8') as f:
         reader = csv.reader(f)
         for i, row in enumerate(reader, 1):
-            if len(row) > 5:
+            if len(row) < 2:
                 continue
 
             file_name = row[0]
             ocr_results = row[1:]
 
-            if len(ocr_results) < 4:
+            if len(ocr_results) < 2:
                 continue
 
-            aligned_sequences = align_multiple_sequences(ocr_results)
-            voted_output = vote_characters(aligned_sequences)
-            final_output = refine_output(voted_output)
+            try:
+                # aligned_sequences = align_multiple_sequences(ocr_results)
+                aligned_sequences = ocr_results
+                if not aligned_sequences:
+                    continue
 
-            new_row = row + [final_output]
-            current_batch.append(new_row)
+                voted_output = vote_characters(aligned_sequences)
+                final_output = refine_output(voted_output)
 
-            if len(current_batch) >= batch_size:
-                save_batch(output_file, current_batch)
-                current_batch = []
-                print(f"Processed and saved {i} lines")
+                new_row = [file_name] + ocr_results + [final_output]
+                current_batch.append(new_row)
+
+                if len(current_batch) >= batch_size:
+                    save_batch(output_file, current_batch)
+                    current_batch = []
+                    print(f"Processed and saved {i} lines")
+            except Exception as e:
+                print(f"Error processing row {i}: {str(e)}")
+                continue
 
     if current_batch:
         save_batch(output_file, current_batch)

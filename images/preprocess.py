@@ -24,13 +24,19 @@ def four_point_transform(image, pts):
     heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
     heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
     maxHeight = max(int(heightA), int(heightB))
+
+    padding = 2
+    padded_width = maxWidth + (2 * padding)
+    padded_height = maxHeight + (2 * padding)
+
     dst = np.array([
-        [0, 0],
-        [maxWidth - 1, 0],
-        [maxWidth - 1, maxHeight - 1],
-        [0, maxHeight - 1]], dtype="float32")
+        [padding, padding],
+        [padded_width - padding - 1, padding],
+        [padded_width - padding - 1, padded_height - padding - 1],
+        [padding, padded_height - padding - 1]], dtype="float32")
+
     M = cv2.getPerspectiveTransform(rect, dst)
-    warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
+    warped = cv2.warpPerspective(image, M, (padded_width, padded_height))
     return warped
 
 df = pd.read_csv('input.csv', header=None, names=['page', 'bounding_boxes'])
