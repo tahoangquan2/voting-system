@@ -174,3 +174,5 @@ cython_debug/
 **/*.jpg
 .csv
 **/*.csv
+.jpeg
+**/*.jpeg
