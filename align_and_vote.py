@@ -126,7 +126,7 @@ def align_multiple_sequences(sequences):
 
             # Check if all sequences are aligned to the same length
             if all(len(seq) == len(longest_sequence) for seq in aligned_sequences):
-                return aligned_sequences
+                return aligned_sequences, 0
 
             # print(f"try_case {try_case} - limit {limit}:")
             # for seq in aligned_sequences:
@@ -136,6 +136,10 @@ def align_multiple_sequences(sequences):
 
         try_case += 1
         # print(f"Try case {try_case} done")
+
+    # If can't align return the best ocr result
+    best_ocr = 1
+    return [sequences[best_ocr], sequences[best_ocr], sequences[best_ocr], sequences[best_ocr]], 1
 
 
 def read_ocr_inputs(csv_file):
@@ -218,6 +222,7 @@ if __name__ == "__main__":
     #     print(f"'{seq}',")
 
     final_ouputs = []
+    failed_list = []
     ocr_outputs = read_ocr_inputs('input.csv')
     for index, line in enumerate(ocr_outputs):
         print(f"[!] Processing row {index+1}")
@@ -226,11 +231,15 @@ if __name__ == "__main__":
         for each in line:
             norm_ocr_outputs.append(normalize_text(each))
 
-        aligned_result = align_multiple_sequences(norm_ocr_outputs)
+        aligned_result, fail = align_multiple_sequences(norm_ocr_outputs)
+        if fail == 1:
+            failed_list.append(index + 1)
         for seq in aligned_result:
             print(f'"{seq}",')
 
         voted_output = vote_characters(aligned_result)
         final_ouputs.append(refine_output(voted_output))
 
+    print(f"Number of failed rows: {len(failed_list)}")
+    print(f"Failed rows: {failed_list}")
     add_voted_results('input.csv', final_ouputs)
