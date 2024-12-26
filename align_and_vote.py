@@ -12,7 +12,8 @@ def normalize_text(text):
     text = text.replace("~", "-").replace("=", "-")
 
     # Convert "«»" and to '""'
-    text = text.replace("« ", '"').replace(" »", '"')
+    text = text.replace("« ", '"')
+    text = text.replace(" »", '"')
 
     # Ensure a space follows "-" at the start of the text
     text = re.sub(r'\.\.\.', '…', text)
