@@ -15,7 +15,7 @@ def normalize_text(text):
     text = text.replace("« ", '"')
     text = text.replace(" »", '"')
 
-    # Ensure a space follows "-" at the start of the text
+    # Convert '...' to '…'
     text = re.sub(r'\.\.\.', '…', text)
 
     # Ensure punctuation is followed by a space
