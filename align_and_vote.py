@@ -104,28 +104,23 @@ def MED(seq1, seq2):
 
 def align_multiple_sequences(sequences):
     try_case = 0
-    while try_case < 4:
+    while try_case < len(sequences):
         aligned_sequences = sequences[:]
         limit = 0
+        base_sequence = aligned_sequences.pop(try_case)
         while limit < 3:
-            # Sort sequences by length (descending) to align shorter ones with the longest
-            aligned_sequences.sort(key=len, reverse=True)
-            if limit == 0:
-                longest_sequence = aligned_sequences.pop(0)
-            else:
-                longest_sequence = aligned_sequences.pop(try_case)
-
-            # Align each remaining sequence to the longest sequence
+            # Align each remaining sequence to the base sequence
             updated_sequences = []
             for seq in aligned_sequences:
-                aligned_seq, longest_sequence = MED(seq, longest_sequence)
+                aligned_seq, base_sequence = MED(seq, base_sequence)
                 updated_sequences.append(aligned_seq)
 
             # Update the list of aligned sequences
-            aligned_sequences = updated_sequences + [longest_sequence]
+            aligned_sequences = updated_sequences
 
             # Check if all sequences are aligned to the same length
-            if all(len(seq) == len(longest_sequence) for seq in aligned_sequences):
+            if all(len(seq) == len(base_sequence) for seq in aligned_sequences):
+                aligned_sequences.append(base_sequence)
                 return aligned_sequences, 0
 
             # print(f"try_case {try_case} - limit {limit}:")
