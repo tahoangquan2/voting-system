@@ -1,92 +1,63 @@
-import pandas as pd
-import ast
+import google.generativeai as genai
+import os
+from datetime import datetime
 
-def calculate_iou_area(box1, box2):
-    x1_min = min(point[0] for point in box1)
-    y1_min = min(point[1] for point in box1)
-    x1_max = max(point[0] for point in box1)
-    y1_max = max(point[1] for point in box1)
-    
-    x2_min = min(point[0] for point in box2)
-    y2_min = min(point[1] for point in box2)
-    x2_max = max(point[0] for point in box2)
-    y2_max = max(point[1] for point in box2)
-    
-    x_left = max(x1_min, x2_min)
-    y_top = max(y1_min, y2_min)
-    x_right = min(x1_max, x2_max)
-    y_bottom = min(y1_max, y2_max)
-    
-    if x_right < x_left or y_bottom < y_top:
-        return 0.0
-    
-    intersection = (x_right - x_left) * (y_bottom - y_top)
-    area1 = (x1_max - x1_min) * (y1_max - y1_min)
-    
-    return intersection / area1 if area1 > 0 else 0
+# Configure the API key
+GOOGLE_API_KEY = os.environ.get('dummy')
+genai.configure(api_key='dummy')
 
-def parse_bbox(bbox_str):
-    return ast.literal_eval(bbox_str)
+# Choose a Gemini model
+model = genai.GenerativeModel('gemini-exp-1206')
 
-def compare_ocr_results(file1_path, file2_path, output_path):
-    df1 = pd.read_csv(file1_path)
-    df2 = pd.read_csv(file2_path)
-    
-    output_data = []
-    
-    for page in df1['page'].unique():
-        page_boxes1 = df1[df1['page'] == page]
-        page_boxes2 = df2[df2['page'] == page]
-        matched_boxes2 = set()
-        
-        for _, box1 in page_boxes1.iterrows():
-            box1_coords = parse_bbox(box1['bounding_box'])
-            matched = False
-            
-            for idx2, box2 in page_boxes2.iterrows():
-                if idx2 in matched_boxes2:
-                    continue
-                    
-                box2_coords = parse_bbox(box2['bounding_box'])
-                overlap_ratio = calculate_iou_area(box1_coords, box2_coords)
-                
-                if overlap_ratio > 0.7:
-                    avg_confidence = (box1['confidence'] + box2['confidence']) / 2
-                    if avg_confidence > 0.5:
-                        output_data.append({
-                            'page': page,
-                            'bounding_box': box1['bounding_box'],
-                            'confidence': avg_confidence,
-                            'source': 'matched'
-                        })
-                    matched_boxes2.add(idx2)
-                    matched = True
-                    break
-            
-            if not matched and box1['confidence'] > 0.5:
-                output_data.append({
-                    'page': page,
-                    'bounding_box': box1['bounding_box'],
-                    'confidence': box1['confidence'],
-                    'source': 'ocr1'
-                })
-        
-        for idx2, box2 in page_boxes2.iterrows():
-            if idx2 not in matched_boxes2 and box2['confidence'] > 0.5:
-                output_data.append({
-                    'page': page,
-                    'bounding_box': box2['bounding_box'],
-                    'confidence': box2['confidence'],
-                    'source': 'ocr2'
-                })
-    
-    output_df = pd.DataFrame(output_data)
-    output_df.to_csv(output_path, index=False)
-    print(f"Processed results saved to {output_path}")
+def correct_sentence(sentence):
+    try:
+        prompt = f"Correct Vietnamese text, output correct text only: '{sentence}'"
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Error: {e}"
+
+def process_sentences_from_file(filepath):
+    # Create output filenames
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    corrected_file = f"corrected_{timestamp}.txt"
+    log_file = f"processing_log_{timestamp}.txt"
+
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f_in, \
+             open(corrected_file, 'w', encoding='utf-8') as f_corrected, \
+             open(log_file, 'w', encoding='utf-8') as f_log:
+
+            # Write initial log entry
+            f_log.write(f"Processing started at: {datetime.now()}\n")
+            f_log.write(f"Input file: {filepath}\n\n")
+
+            for line_num, line in enumerate(f_in, 1):
+                sentence = line.strip()
+                if sentence:  # Skip empty lines
+                    corrected = correct_sentence(sentence)
+
+                    f_corrected.write(f"{corrected}")
+
+                    # Write detailed information to log file
+                    f_log.write(f"Line {line_num}:\n")
+                    f_log.write(f"Original: {sentence}\n")
+                    f_log.write(f"Corrected: {corrected}\n")
+                    f_log.write("-" * 50 + "\n")
+
+                    print(f"Processed line {line_num}: {sentence}")
+
+            f_log.write(f"\nProcessing completed at: {datetime.now()}")
+
+    except FileNotFoundError:
+        print(f"Error: File not found: {filepath}")
+        with open(log_file, 'w', encoding='utf-8') as f_log:
+            f_log.write(f"ERROR: File not found: {filepath}\n")
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        with open(log_file, 'a', encoding='utf-8') as f_log:
+            f_log.write(f"\nERROR: {e}\n")
 
 if __name__ == "__main__":
-    compare_ocr_results(
-        'paddleENGbbconfi.csv',
-        'Surya.csv',
-        'matched_boxes.csv'
-    )
+    input_file = "sentences.txt"
+    process_sentences_from_file(input_file)
