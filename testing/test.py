@@ -34,18 +34,17 @@ def process_sentences_from_file(filepath):
 
             for line_num, line in enumerate(f_in, 1):
                 sentence = line.strip()
-                if sentence:  # Skip empty lines
-                    corrected = correct_sentence(sentence)
+                corrected = correct_sentence(sentence)
 
-                    f_corrected.write(f"{corrected}")
+                f_corrected.write(f"{corrected}")
 
-                    # Write detailed information to log file
-                    f_log.write(f"Line {line_num}:\n")
-                    f_log.write(f"Original: {sentence}\n")
-                    f_log.write(f"Corrected: {corrected}\n")
-                    f_log.write("-" * 50 + "\n")
+                # Write detailed information to log file
+                f_log.write(f"Line {line_num}:\n")
+                f_log.write(f"Original: {sentence}\n")
+                f_log.write(f"Corrected: {corrected}\n")
+                f_log.write("-" * 50 + "\n")
 
-                    print(f"Processed line {line_num}: {sentence}")
+                print(f"Processed line {line_num}: {sentence}")
 
             f_log.write(f"\nProcessing completed at: {datetime.now()}")
 
