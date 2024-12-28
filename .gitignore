@@ -177,3 +177,9 @@ cython_debug/
 .jpeg
 **/*.jpeg
 .idea/workspace.xml
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/vcs.xml
+.idea/voting-system.iml
+voting/check_valid_word.py
