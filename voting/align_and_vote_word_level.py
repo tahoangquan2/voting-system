@@ -112,16 +112,18 @@ def normalize_text(text):
     # Remove newline characters
     text = re.sub(r'\s*[\n\r]+\s*', ' ', text)
 
-    # Convert "~" and "=" to "-"
-    text = text.replace("~", "-").replace("=", "-")
+    # Convert "~", "=", "—", "→", "_" to "-"
+    text = text.replace("~", "-")
+    text = text.replace("=", "-")
+    text = text.replace("—", "-")
+    text = text.replace("→", '-')
+    text = text.replace("_", '-')
 
-    # Convert "«»" and to '""'
+    # Convert "«»", "<>" to '""'
     text = text.replace("« ", '"')
     text = text.replace(" »", '"')
-
-    text = text.replace("_", '')
-    text = text.replace("~", '')
-    text = text.replace("—", '-')
+    text = text.replace("< ", '"')
+    text = text.replace(" >", '"')
 
     # Convert '...' to '…'
     text = re.sub(r'\.\.\.', '…', text)
@@ -413,9 +415,11 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
     weight_container = []
     begin_punctuation = most_common_start_punctuation(list_word)
     end_punctuation = most_common_end_punctuation(list_word)
+
     for i in range(len(list_word)):
         nw = re.sub(r'[.,:_;?/"()…]', '', list_word[i])
-
+        if(nw == ''):
+            continue
         in_list, similar_words = check_word_in_file(nw, vietnam_word_list, normalize_vietnam_list)
         if in_list:
             for j in range(len(list_word)):
@@ -427,8 +431,9 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
     for word in list_word:
         org_word = word
         word = re.sub(r'[.,:_;?/"()…]', '', word)
-        if word == 'None':
+        if word == 'None' or word == '':
             continue
+
         if is_integer(word):
             vote_container.append(word)
             weight_container.append(1)
@@ -453,7 +458,10 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
             weight_container.append(0.54 * (1 - dist/max(len(word), len(sim))))
 
     if not vote_container:
-        return None, 0  # Return None if the list is empty
+        if begin_punctuation == '' and end_punctuation == '':
+            return None, 0  # Return None if the list is empty
+        else:
+            return begin_punctuation + end_punctuation, 1
 
     if len(vote_container) != len(weight_container):
         raise ValueError("vote_container and weight_container must have the same length.")
@@ -479,7 +487,7 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
 
     # Iterate through rows starting from the second row
     rowID = 1
-    for row in sheet.iter_rows(min_row=2,max_row = 360, min_col=2, max_col=4):  # Columns B, C, D
+    for row in sheet.iter_rows(min_row=124,max_row = 124, min_col=2, max_col=4):  # Columns B, C, D
         print(f"Process on row {rowID}")
 
         sentence1 = normalize_text(str(row[0].value))  # Column B
@@ -501,7 +509,7 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
                 word3 = sentences_splits[2][i]
 
                 list_word_to_vote = [word1, word2, word3]
-
+                print(list_word_to_vote)
                 vote_word = vote(list_word_to_vote,vietnam_word_list, normalize_vietnam_list)
 
                 if(vote_word[0]):
@@ -524,12 +532,12 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
 
 if __name__ == "__main__":
     # Example usage
-    file_path = "ocr_results.xlsx"  # Replace with your file path
+    file_path = "full_OCR_result.xlsx"  # Replace with your file path
     vietnamese_file_path = 'VN_MorphoSyllable_List.txt'
     vietnam_word_list = load_words(vietnamese_file_path)
     normalize_vietnam_list = load_normalize_words(vietnamese_file_path)
     read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list)
-    # list_word = ['PHAN', 'PHẦN', 'PHẦN']
+    # list_word = ['-', '-', '-']
     # print(vote(list_word, vietnam_word_list, normalize_vietnam_list))
 
 
