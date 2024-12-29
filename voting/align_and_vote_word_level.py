@@ -69,7 +69,7 @@ def load_normalize_words(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
         return [normalize_vietnamese(line.strip()) for line in file]
 
-def find_similar_words(word, word_list, max_results=5):
+def find_similar_words(word, word_list, max_results=10):
     """
     Find similar words using difflib.
     - Returns up to `max_results` similar words from the word list.
@@ -79,7 +79,7 @@ def find_similar_words(word, word_list, max_results=5):
     cnt = 0
     for check in word_list:
         normalize_check = normalize_vietnamese(check)
-        similar, dis = words_similar(normalize_word, normalize_check, threshold= 0.15)
+        similar, dis = words_similar(normalize_word, normalize_check, threshold= 0.3)
 
         if similar:
             similar_list.append(check)
@@ -230,6 +230,7 @@ def words_similar(word1, word2, threshold=0.5):
       return True , distance
     else:
       return False , distance
+
 
 def MED_to_word(sen1, sen2):
     # Initialize cache for MED calculation and operations tracking
@@ -416,9 +417,10 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
     begin_punctuation = most_common_start_punctuation(list_word)
     end_punctuation = most_common_end_punctuation(list_word)
 
-    for i in range(len(list_word)):
+    for i in range(len(list_word)): #Early termination if there is a valid word and a word same to it
+        i = len(list_word) - 1 - i
         nw = re.sub(r'[.,:_;?/"()…]', '', list_word[i])
-        if(nw == ''):
+        if(nw == '' or nw == 'None'):
             continue
         in_list, similar_words = check_word_in_file(nw, vietnam_word_list, normalize_vietnam_list)
         if in_list:
@@ -428,12 +430,11 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
                     if(now == nw):
                         return list_word[i], 2004
 
-    for word in list_word:
+    for i , word in enumerate(reversed(list_word)):
         org_word = word
-        word = re.sub(r'[.,:_;?/"()…]', '', word)
         if word == 'None' or word == '':
             continue
-
+        word = re.sub(r'[.,:_;?/"()…]', '', word)
         if is_integer(word):
             vote_container.append(word)
             weight_container.append(1)
@@ -445,17 +446,17 @@ def vote(list_word, vietnam_word_list, normalize_vietnam_list):
                     other_word = re.sub(r'[.,:_;?/"(){}[]…]', '', other_word)
                     nw = normalize_vietnamese(normalize_word(word))
                     now = normalize_vietnamese(normalize_word(other_word))
-                    similar, dist = words_similar(nw, now, threshold = 0.15)
-                    if(similar):
+                    similar, dist = words_similar(nw, now, threshold = 0.3)
+                    if(similar): #Early termination if there is a valid word and a word similar to it
                             return begin_punctuation + word + end_punctuation, 2011
 
             vote_container.append(word)
-            weight_container.append(1)
+            weight_container.append(1 * (1.25 * (i // 2)))
             continue
         for sim in similar_words:
             vote_container.append(sim)
             dist = levenshtein_distance(sim, word)
-            weight_container.append(0.54 * (1 - dist/max(len(word), len(sim))))
+            weight_container.append(0.68 * (1 - dist/max(len(word), len(sim))) * (1.25 * (i // 2)))
 
     if not vote_container:
         if begin_punctuation == '' and end_punctuation == '':
@@ -487,7 +488,7 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
 
     # Iterate through rows starting from the second row
     rowID = 1
-    for row in sheet.iter_rows(min_row=124,max_row = 124, min_col=2, max_col=4):  # Columns B, C, D
+    for row in sheet.iter_rows(min_row=122 ,max_row = 156, min_col=2, max_col=4):  # Columns B, C, D
         print(f"Process on row {rowID}")
 
         sentence1 = normalize_text(str(row[0].value))  # Column B
@@ -509,7 +510,7 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
                 word3 = sentences_splits[2][i]
 
                 list_word_to_vote = [word1, word2, word3]
-                print(list_word_to_vote)
+
                 vote_word = vote(list_word_to_vote,vietnam_word_list, normalize_vietnam_list)
 
                 if(vote_word[0]):
@@ -527,22 +528,18 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
     print(f"Processed workbook saved: {file_path}")
 
 
+# Example usage
+file_path = "full_OCR_result.xlsx"  # Replace with your file path
+vietnamese_file_path = 'VN_MorphoSyllable_List.txt'
+vietnam_word_list = load_words(vietnamese_file_path)
+normalize_vietnam_list = load_normalize_words(vietnamese_file_path)
+read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list)
 
-
-
-if __name__ == "__main__":
-    # Example usage
-    file_path = "full_OCR_result.xlsx"  # Replace with your file path
-    vietnamese_file_path = 'VN_MorphoSyllable_List.txt'
-    vietnam_word_list = load_words(vietnamese_file_path)
-    normalize_vietnam_list = load_normalize_words(vietnamese_file_path)
-    read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list)
-    # list_word = ['-', '-', '-']
-    # print(vote(list_word, vietnam_word_list, normalize_vietnam_list))
-
-
-
-
+#
+#
+# # Input and output file paths
+# input_txt = 'VN_MorphoSyllable_List.txt'
+# output_csv = 'similar_words.csv'
 
 
 
