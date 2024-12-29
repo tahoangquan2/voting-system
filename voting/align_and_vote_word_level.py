@@ -488,7 +488,7 @@ def read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list ):
 
     # Iterate through rows starting from the second row
     rowID = 1
-    for row in sheet.iter_rows(min_row=122 ,max_row = 156, min_col=2, max_col=4):  # Columns B, C, D
+    for row in sheet.iter_rows(min_row=5602 ,max_row = 8596, min_col=2, max_col=4):  # Columns B, C, D
         print(f"Process on row {rowID}")
 
         sentence1 = normalize_text(str(row[0].value))  # Column B
@@ -540,7 +540,3 @@ read_and_vote(file_path, vietnam_word_list, normalize_vietnam_list)
 # # Input and output file paths
 # input_txt = 'VN_MorphoSyllable_List.txt'
 # output_csv = 'similar_words.csv'
-
-
-
-
