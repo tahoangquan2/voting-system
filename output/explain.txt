@@ -1,0 +1,1 @@
+Images from input folder with bounding box and label files will be saved here.
