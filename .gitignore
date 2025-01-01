@@ -170,14 +170,14 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-.jpg
-**/*.jpg
+#.jpg
+#**/*.jpg
 .csv
 **/*.csv
 .xlsx
 **/*.xlsx
-.jpeg
-**/*.jpeg
+#.jpeg
+#**/*.jpeg
 .idea/workspace.xml
 .idea/inspectionProfiles/profiles_settings.xml
 .idea/inspectionProfiles/Project_Default.xml
